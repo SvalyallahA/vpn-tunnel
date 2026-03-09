@@ -775,59 +775,83 @@ show_summary() {
         echo -e "    Password:   ${CYAN}${CONF_SOCKS_PASS}${NC}"
     fi
 
-    # ── Generate dns:// config strings (HTTP Injector compatible) ──────────
-    echo ""
-    print_line 60 "═"
-    echo -e "  ${BOLD}${GREEN}Config Strings for HTTP Injector${NC}"
-    echo -e "  ${DIM}Import: Settings → DNS Tunnel → Import Config${NC}"
-    print_line 60 "═"
-
-    local doh_resolvers=(
-        "https://dns.google/dns-query"
-        "https://cloudflare-dns.com/dns-query"
-        "https://dns.quad9.net/dns-query"
-        "https://dns.adguard-dns.com/dns-query"
+    # ── DNS resolvers (diverse list — different ISPs block different ones) ──
+    local resolver_addrs=(
+        "8.8.8.8:53"
+        "8.8.4.4:53"
+        "1.1.1.1:53"
+        "1.0.0.1:53"
+        "9.9.9.9:53"
+        "149.112.112.112:53"
+        "208.67.222.222:53"
+        "208.67.220.220:53"
+        "94.140.14.14:53"
+        "94.140.15.15:53"
+        "185.228.168.9:53"
+        "185.228.169.9:53"
+        "76.76.19.19:53"
+        "76.76.2.0:53"
+        "64.6.64.6:53"
+        "64.6.65.6:53"
+        "77.88.8.8:53"
+        "77.88.8.1:53"
+        "156.154.70.1:53"
+        "156.154.71.1:53"
     )
-    local doh_names=("Google" "Cloudflare" "Quad9" "AdGuard")
+    local resolver_names=(
+        "Google-1"
+        "Google-2"
+        "Cloudflare-1"
+        "Cloudflare-2"
+        "Quad9-1"
+        "Quad9-2"
+        "OpenDNS-1"
+        "OpenDNS-2"
+        "AdGuard-1"
+        "AdGuard-2"
+        "CleanBrowsing-1"
+        "CleanBrowsing-2"
+        "ControlD-1"
+        "ControlD-2"
+        "Verisign-1"
+        "Verisign-2"
+        "Yandex-1"
+        "Yandex-2"
+        "Neustar-1"
+        "Neustar-2"
+    )
 
     local user="${CONF_SOCKS_USER:-}"
     local pass="${CONF_SOCKS_PASS:-}"
     local i
 
-    for i in "${!doh_resolvers[@]}"; do
-        local resolver="${doh_resolvers[$i]}"
-        local rname="${doh_names[$i]}"
+    # ── Generate dns:// config strings (HTTP Injector compatible) ──────────
+    echo ""
+    print_line 60 "═"
+    echo -e "  ${BOLD}${GREEN}Config Strings for HTTP Injector (dns://)${NC}"
+    echo -e "  ${DIM}Each uses a different DNS resolver — try until one works${NC}"
+    echo -e "  ${DIM}Different ISPs block different resolvers${NC}"
+    print_line 60 "═"
+
+    for i in "${!resolver_addrs[@]}"; do
+        local resolver="${resolver_addrs[$i]}"
+        local rname="${resolver_names[$i]}"
         local config_json
         config_json=$(printf '{"ps":"%s","addr":"%s","ns":"%s","pubkey":"%s","user":"%s","pass":"%s"}' \
-            "${rname}-DoH" "$resolver" "$CONF_DOMAIN" "$CONF_PUBKEY" "$user" "$pass")
+            "$rname" "$resolver" "$CONF_DOMAIN" "$CONF_PUBKEY" "$user" "$pass")
         local b64
         b64=$(echo -n "$config_json" | base64 -w0 2>/dev/null || echo -n "$config_json" | base64)
-        local dns_uri="dns://${b64}"
 
         echo ""
-        if [[ $i -eq 0 ]]; then
-            echo -e "  ${BOLD}${GREEN}▸ ${rname} DoH (RECOMMENDED)${NC}"
-        else
-            echo -e "  ${BOLD}▸ ${rname} DoH${NC}"
-        fi
-        echo -e "  ${WHITE}${dns_uri}${NC}"
+        echo -e "  ${BOLD}▸ ${rname}${NC} ${DIM}(${resolver})${NC}"
+        echo -e "  ${WHITE}dns://${b64}${NC}"
     done
-
-    # Also generate a UDP one for fallback
-    local udp_json
-    udp_json=$(printf '{"ps":"%s","addr":"%s","ns":"%s","pubkey":"%s","user":"%s","pass":"%s"}' \
-        "UDP-fallback" "8.8.8.8:53" "$CONF_DOMAIN" "$CONF_PUBKEY" "$user" "$pass")
-    local udp_b64
-    udp_b64=$(echo -n "$udp_json" | base64 -w0 2>/dev/null || echo -n "$udp_json" | base64)
-    echo ""
-    echo -e "  ${BOLD}${YELLOW}▸ UDP fallback (old method — may be blocked)${NC}"
-    echo -e "  ${DIM}dns://${udp_b64}${NC}"
 
     # ── Generate slipnet:// config strings (SlipNet Android app) ───────────
     echo ""
     print_line 60 "═"
-    echo -e "  ${BOLD}${GREEN}Config Strings for SlipNet (Android)${NC}"
-    echo -e "  ${DIM}Tap the link on Android → imports automatically${NC}"
+    echo -e "  ${BOLD}${GREEN}Config Strings for SlipNet (slipnet://)${NC}"
+    echo -e "  ${DIM}Tap the link on Android → auto-imports${NC}"
     print_line 60 "═"
 
     local ssh_enabled="" ssh_port="22" ssh_host="127.0.0.1"
@@ -835,37 +859,28 @@ show_summary() {
         ssh_enabled="1"
     fi
 
-    for i in "${!doh_resolvers[@]}"; do
-        local resolver="${doh_resolvers[$i]}"
-        local rname="${doh_names[$i]}"
-        local name="${rname}-DoH"
+    for i in "${!resolver_addrs[@]}"; do
+        local resolver="${resolver_addrs[$i]}"
+        local rname="${resolver_names[$i]}"
         # slipnet:// v16 pipe-delimited, 36 fields
-        # field 5: resolvers (not used for DoH but keep for compat)
-        # field 22: dohUrl
-        # field 23: dnsTransport = "doh"
-        local data="16|dnstt|${name}|${CONF_DOMAIN}|8.8.8.8:53:0|0|5000|bbr|1080|127.0.0.1|0|${CONF_PUBKEY}|||${ssh_enabled}|${user}|${pass}|${ssh_port}|0|${ssh_host}|0|${resolver}|doh|password|||0|0|443|||0||0|0|"
+        # field 5: resolvers, field 23: dnsTransport = "udp"
+        local data="16|dnstt|${rname}|${CONF_DOMAIN}|${resolver}:0|0|5000|bbr|1080|127.0.0.1|0|${CONF_PUBKEY}|||${ssh_enabled}|${user}|${pass}|${ssh_port}|0|${ssh_host}|0||udp|password|||0|0|443|||0||0|0|"
         local slipnet_b64
         slipnet_b64=$(echo -n "$data" | base64 -w0 2>/dev/null || echo -n "$data" | base64)
-        local slipnet_uri="slipnet://${slipnet_b64}"
 
         echo ""
-        if [[ $i -eq 0 ]]; then
-            echo -e "  ${BOLD}${GREEN}▸ ${rname} DoH (RECOMMENDED)${NC}"
-        else
-            echo -e "  ${BOLD}▸ ${rname} DoH${NC}"
-        fi
-        echo -e "  ${WHITE}${slipnet_uri}${NC}"
+        echo -e "  ${BOLD}▸ ${rname}${NC} ${DIM}(${resolver})${NC}"
+        echo -e "  ${WHITE}slipnet://${slipnet_b64}${NC}"
     done
 
     # ── Manual settings (for any app) ──────────────────────────────────────
     echo ""
     print_line 60 "═"
-    echo -e "  ${BOLD}Manual Settings (any app)${NC}"
+    echo -e "  ${BOLD}Manual Settings (for any DNS tunnel app)${NC}"
     print_line 60 "═"
     echo ""
     echo -e "  Protocol:       ${CYAN}DNS Tunnel (DNSTT)${NC}"
-    echo -e "  DNS Transport:  ${CYAN}DoH (DNS-over-HTTPS)${NC}"
-    echo -e "  DoH URL:        ${CYAN}https://dns.google/dns-query${NC}"
+    echo -e "  DNS Transport:  ${CYAN}UDP${NC}"
     echo -e "  Domain:         ${CYAN}${CONF_DOMAIN}${NC}"
     echo -e "  Public Key:     ${CYAN}${CONF_PUBKEY}${NC}"
     if [[ -n "$user" ]]; then
@@ -873,10 +888,11 @@ show_summary() {
         echo -e "  SSH Password:   ${CYAN}${pass}${NC}"
     fi
     echo ""
-    echo -e "  ${DIM}If Google DoH is blocked, try:${NC}"
-    echo -e "  ${DIM}  https://cloudflare-dns.com/dns-query${NC}"
-    echo -e "  ${DIM}  https://dns.quad9.net/dns-query${NC}"
-    echo -e "  ${DIM}  https://dns.adguard-dns.com/dns-query${NC}"
+    echo -e "  ${YELLOW}Strategy: Send your friend 3-4 configs with different${NC}"
+    echo -e "  ${YELLOW}resolvers. Each ISP blocks different ones.${NC}"
+    echo ""
+    echo -e "  ${DIM}Most likely to work: Google (8.8.8.8), Cloudflare (1.1.1.1)${NC}"
+    echo -e "  ${DIM}Try if those fail: OpenDNS, Yandex, Verisign, Neustar${NC}"
     echo ""
 }
 
