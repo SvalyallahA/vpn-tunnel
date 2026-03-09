@@ -1,71 +1,59 @@
-# DNS Tunnel Server — DoH Config Generator
+# DNS Tunnel Server — Config Generator for HTTP Injector & SlipNet
 
-Improved DNS tunnel server setup that generates **HTTP Injector** and **SlipNet** compatible config strings using **DoH (DNS-over-HTTPS)** instead of plain UDP — the fix for when old configs stop working.
+Generates **20 config strings** with different DNS resolvers for HTTP Injector (`dns://`) and SlipNet (`slipnet://`). Each ISP in Iran blocks different resolvers — send your friend several configs until one works.
 
 ---
 
-## The Problem
+## Why Old Configs Stop Working
 
-Old configs use `"addr":"8.8.8.8:53"` (plain UDP DNS). Iran's DPI detects and blocks this. Different ISPs block differently — that's why it works for you but not your friend.
-
-## The Fix
-
-Same config format, but with **DoH resolvers** instead of UDP:
-- `"addr":"https://dns.google/dns-query"` instead of `"addr":"8.8.8.8:53"`
-- `slipnet://` configs with `dnsTransport=doh` instead of `udp`
-
-Traffic now looks like normal HTTPS to Google. Slower, but works.
+- Each config uses one DNS resolver (e.g. `8.8.8.8:53`)
+- Iran blocks resolvers differently per ISP (MCI, Irancell, Shatel, etc.)
+- DoH (DNS-over-HTTPS) is **SNI-blocked** — doesn't work at all
+- **Solution:** generate configs with **many different UDP resolvers** and try them
 
 ---
 
 # How to Use
 
-## Step 1 — Set Up Server on Ubuntu VPS
+## Step 1 — Set Up Server (Ubuntu VPS)
 
 ```bash
 curl -fsSL -o dns-tunnel-server.sh https://raw.githubusercontent.com/SvalyallahA/vpn-tunnel/main/dns-tunnel-solution/dns-tunnel-server.sh
 sudo bash dns-tunnel-server.sh
 ```
 
-Choose **1) Install & Setup** and follow the 9-step wizard.
+Choose **1) Install & Setup** → follow the wizard.
 
 ## Step 2 — Get Config Strings
 
-Choose **3) Show Configuration** from the menu. It outputs:
+Choose **3) Show Configuration**. It generates **20 configs per app** using these resolvers:
 
-**For HTTP Injector** — `dns://` config strings with DoH:
-```
-dns://eyJwcyI6Ikdvb2dsZS1Eb0giLCJhZGRyIjoiaHR0cHM6Ly9kbnMuZ29vZ2xlL2Rucy1xdWVyeSIsIm5zIjoidC5leGFtcGxlLmNvbSIsInB1YmtleSI6IjY0Y2hhcmhleCIsInVzZXIiOiIiLCJwYXNzIjoiIn0=
-```
-
-**For SlipNet (Android)** — `slipnet://` config strings with DoH:
-```
-slipnet://MTZ8ZG5zdHR8R29vZ2xlLURvSHx0LmV4YW1wbGUuY29tfDguOC44Ljg6NTM6MHwwfDUwMDB8YmJyfDEwODB8MTI3LjAuMC4xfDB8NjRjaGFyaGV4fHx8fHx8MjJ8MHwxMjcuMC4wLjF8MHxodHRwczovL2Rucy5nb29nbGUvZG5zLXF1ZXJ5fGRvaHxwYXNzd29yZHx8fDB8MHw0NDN8fHwwfHwwfDB8
-```
-
-Multiple resolvers are generated (Google, Cloudflare, Quad9, AdGuard). Send your friend whichever works on their ISP.
-
-## Step 3 — Share Config String with Friend
-
-1. Copy the `dns://` or `slipnet://` string from the menu
-2. Send it to your friend via any messenger
-3. They import it in their app — done
-
-**HTTP Injector:** Paste the `dns://` string in the import field
-**SlipNet:** Tap the `slipnet://` link on Android — auto-imports
-
-## Step 4 — If One Resolver is Blocked, Try Another
-
-Each ISP blocks different resolvers. The script generates configs for 4 DoH resolvers:
-
-| Config | Resolver | Try order |
+| Provider | Resolver 1 | Resolver 2 |
 |---|---|---|
-| **Google DoH** | `https://dns.google/dns-query` | First |
-| **Cloudflare DoH** | `https://cloudflare-dns.com/dns-query` | Second |
-| **Quad9 DoH** | `https://dns.quad9.net/dns-query` | Third |
-| **AdGuard DoH** | `https://dns.adguard-dns.com/dns-query` | Fourth |
+| Google | `8.8.8.8:53` | `8.8.4.4:53` |
+| Cloudflare | `1.1.1.1:53` | `1.0.0.1:53` |
+| Quad9 | `9.9.9.9:53` | `149.112.112.112:53` |
+| OpenDNS | `208.67.222.222:53` | `208.67.220.220:53` |
+| AdGuard | `94.140.14.14:53` | `94.140.15.15:53` |
+| CleanBrowsing | `185.228.168.9:53` | `185.228.169.9:53` |
+| ControlD | `76.76.19.19:53` | `76.76.2.0:53` |
+| Verisign | `64.6.64.6:53` | `64.6.65.6:53` |
+| Yandex | `77.88.8.8:53` | `77.88.8.1:53` |
+| Neustar | `156.154.70.1:53` | `156.154.71.1:53` |
 
-Send your friend 2-3 configs with different resolvers so they can try until one works.
+## Step 3 — Share with Friend
+
+1. Copy 3-4 `dns://` strings (different resolvers)
+2. Send via messenger
+3. Friend imports in **HTTP Injector** → tries each until one connects
+
+For SlipNet (Android): send the `slipnet://` strings instead.
+
+## Step 4 — If It Doesn't Work
+
+- **Try a different resolver** — that's the whole strategy
+- **Lower MTU** — reconfigure with menu **8)** → set MTU to 512
+- **Check server** — menu **2)** for status, **4)** for logs
 
 ---
 
@@ -78,21 +66,12 @@ sudo bash dns-tunnel-server.sh
 | Menu | Action |
 |---|---|
 | **1) Install & Setup** | Setup wizard |
-| **2) Show Status** | Service status, ports, uptime |
-| **3) Show Configuration** | **Config strings to share** (dns:// + slipnet://) |
-| **4) View Logs** | Live or recent logs |
-| **5/6/7) Start/Stop/Restart** | Service control |
-| **8) Reconfigure** | Change MTU, mode, domain, keys |
+| **2) Show Status** | Service status |
+| **3) Show Configuration** | **Config strings to share** |
+| **4) View Logs** | Troubleshooting |
+| **5/6/7)** | Start / Stop / Restart |
+| **8) Reconfigure** | Change MTU, mode, domain |
 | **9) Uninstall** | Clean removal |
-
----
-
-# Troubleshooting
-
-- **Works for me, not friend** → send them a config with a different DoH resolver
-- **Very slow** → expected with DoH, lower MTU to 512
-- **"FORMERR: payload size too small"** → reconfigure server MTU to 512
-- **Server won't start** → menu **4)** to check logs, verify port 53 is free
 
 ---
 
@@ -101,17 +80,20 @@ sudo bash dns-tunnel-server.sh
 # راهنمای فارسی
 
 ## مشکل
-کانفیگ‌های قبلی از `8.8.8.8:53` (UDP ساده) استفاده می‌کنن. فیلترینگ ایران این رو تشخیص میده.
+هر ISP (همراه اول، ایرانسل، شاتل و ...) resolver های مختلفی رو بلاک می‌کنه. DoH هم کلا بلاکه.
 
 ## راه‌حل
-همون فرمت کانفیگ، ولی با **DoH** به جای UDP. ترافیک شبیه HTTPS عادی به Google میشه.
+این اسکریپت **۲۰ کانفیگ** با resolver های مختلف تولید می‌کنه. چندتا بفرستید تا یکیشون کار کنه.
 
 ## نحوه استفاده
-1. سرور رو نصب کنید: `sudo bash dns-tunnel-server.sh` → گزینه 1
-2. از منو گزینه **3)** رو بزنید تا کانفیگ‌ها نشون داده بشه
-3. رشته `dns://` رو کپی کنید و برای دوستتون بفرستید
-4. دوستتون توی HTTP Injector وارد می‌کنه — تمام
+1. سرور: `sudo bash dns-tunnel-server.sh` → گزینه 1
+2. گزینه **3)** → کانفیگ‌ها نشون داده میشه
+3. ۳-۴ تا رشته `dns://` رو کپی و برای دوستتون بفرستید
+4. دوستتون توی HTTP Injector امتحان می‌کنه — هرکدوم وصل شد همون
 
-اگر یک resolver کار نکرد، کانفیگ با resolver دیگه بفرستید (Google، Cloudflare، Quad9، AdGuard).
+## نکات
+- MTU رو **512** بذارید
+- اگر یکی کار نکرد، با resolver بعدی امتحان کنید
+- کند ولی **کار می‌کنه**
 
 </div>
