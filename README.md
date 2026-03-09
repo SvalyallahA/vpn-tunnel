@@ -66,7 +66,7 @@ In the Cloudflare dashboard, create these DNS records:
 
 ```bash
 # Download the script
-curl -fsSL -o dns-tunnel-server.sh https://raw.githubusercontent.com/YOUR_REPO/dns-tunnel-solution/dns-tunnel-server.sh
+curl -fsSL -o dns-tunnel-server.sh https://raw.githubusercontent.com/SvalyallahA/vpn-tunnel/main/dns-tunnel-solution/dns-tunnel-server.sh
 
 # Run it
 sudo bash dns-tunnel-server.sh
